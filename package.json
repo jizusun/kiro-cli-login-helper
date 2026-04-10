@@ -1,0 +1,21 @@
+{
+  "name": "ms-teams-webhook",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "cac": "^7.0.0",
+    "consola": "^3.4.2",
+    "dotenv": "^17.4.1",
+    "node-pty": "^1.1.0"
+  }
+}
