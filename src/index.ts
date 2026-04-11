@@ -42,7 +42,9 @@ cli
     const isLoggingIn = { value: false };
     if (watch) {
       setInterval(() => checkAndLogin(isLoggingIn, checkLogin, handleLogin), interval);
-      consola.info(`Monitoring kiro-cli login status every ${interval}ms`);
+      const seconds = interval / 1000;
+      const humanTime = seconds >= 3600 ? `${(seconds / 3600).toFixed(1)}h` : seconds >= 60 ? `${(seconds / 60).toFixed(1)}m` : `${seconds}s`;
+      consola.info(`Monitoring kiro-cli login status every ${humanTime}`);
     } else {
       checkAndLogin(isLoggingIn, checkLogin, handleLogin);
     }

@@ -1,4 +1,15 @@
+import { mkdirSync } from "fs";
+
 const WEBHOOK_URL = process.env.TEAMS_WEBHOOK_URL!;
+const LOGS_DIR = "logs";
+
+mkdirSync(LOGS_DIR, { recursive: true });
+
+async function logRequestResponse(payload: object, status: number, responseBody: string) {
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const entry = { timestamp: new Date().toISOString(), request: payload, response: { status, body: responseBody } };
+  await Bun.write(`${LOGS_DIR}/${ts}.json`, JSON.stringify(entry, null, 2));
+}
 
 export async function postCard(body: object[], actions?: object[]) {
   const payload = {
@@ -15,7 +26,10 @@ export async function postCard(body: object[], actions?: object[]) {
     body: JSON.stringify(payload),
   });
   
+  const responseBody = await response.text();
+  await logRequestResponse(payload, response.status, responseBody);
+
   if (!response.ok) {
-    throw new Error(`Teams webhook failed: ${response.status} ${await response.text()}`);
+    throw new Error(`Teams webhook failed: ${response.status} ${responseBody}`);
   }
 }
