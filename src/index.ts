@@ -2,7 +2,41 @@ import cac from "cac";
 import { consola } from "consola";
 import { appendFileSync } from "fs";
 import { checkLogin } from "./kiro";
-import { checkAndLogin, handleLogin } from "./monitor";
+import { createCheckAndLogin, handleLogin } from "./monitor";
+
+export function formatInterval(ms: number): string {
+  const s = ms / 1000;
+  return s >= 3600 ? `${(s / 3600).toFixed(1)}h` : s >= 60 ? `${(s / 60).toFixed(1)}m` : `${s}s`;
+}
+
+export interface CliOptions {
+  webhookUrl?: string;
+  identityProvider?: string;
+  license?: string;
+  region?: string;
+}
+
+export interface ResolvedConfig {
+  webhookUrl: string;
+  identityProvider: string;
+  license: string;
+  region: string;
+}
+
+export function resolveConfig(opts: CliOptions, env: Record<string, string | undefined>): ResolvedConfig {
+  const webhookUrl = opts.webhookUrl ?? env.TEAMS_WEBHOOK_URL;
+  if (!webhookUrl) throw new Error("Missing --webhook-url or TEAMS_WEBHOOK_URL env var");
+
+  const identityProvider = opts.identityProvider ?? env.KIRO_IDENTITY_PROVIDER;
+  if (!identityProvider) throw new Error("Missing --identity-provider or KIRO_IDENTITY_PROVIDER env var");
+
+  return {
+    webhookUrl,
+    identityProvider,
+    license: opts.license ?? env.KIRO_LICENSE ?? "pro",
+    region: opts.region ?? env.KIRO_REGION ?? "us-east-1",
+  };
+}
 
 const cli = cac("kiro-login-helper");
 
@@ -23,30 +57,26 @@ cli
       }});
     }
 
-    const url = webhookUrl ?? process.env.TEAMS_WEBHOOK_URL;
-    if (!url) {
-      consola.error("Missing --webhook-url or TEAMS_WEBHOOK_URL env var");
+    let config: ResolvedConfig;
+    try {
+      config = resolveConfig({ webhookUrl, identityProvider, license, region }, process.env);
+    } catch (e: any) {
+      consola.error(e.message);
       process.exit(1);
     }
-    process.env.TEAMS_WEBHOOK_URL = url;
-    process.env.KIRO_LICENSE = license;
 
-    const idp = identityProvider ?? process.env.KIRO_IDENTITY_PROVIDER;
-    if (!idp) {
-      consola.error("Missing --identity-provider or KIRO_IDENTITY_PROVIDER env var");
-      process.exit(1);
-    }
-    process.env.KIRO_IDENTITY_PROVIDER = idp;
-    process.env.KIRO_REGION = region;
+    process.env.TEAMS_WEBHOOK_URL = config.webhookUrl;
+    process.env.KIRO_IDENTITY_PROVIDER = config.identityProvider;
+    process.env.KIRO_LICENSE = config.license;
+    process.env.KIRO_REGION = config.region;
 
-    const isLoggingIn = { value: false };
+    const checkAndLogin = createCheckAndLogin(checkLogin, handleLogin);
     if (watch) {
-      setInterval(() => checkAndLogin(isLoggingIn, checkLogin, handleLogin), interval);
-      const seconds = interval / 1000;
-      const humanTime = seconds >= 3600 ? `${(seconds / 3600).toFixed(1)}h` : seconds >= 60 ? `${(seconds / 60).toFixed(1)}m` : `${seconds}s`;
-      consola.info(`Monitoring kiro-cli login status every ${humanTime}`);
+      checkAndLogin();
+      setInterval(() => checkAndLogin(), interval);
+      consola.info(`Monitoring kiro-cli login status every ${formatInterval(interval)}`);
     } else {
-      checkAndLogin(isLoggingIn, checkLogin, handleLogin);
+      checkAndLogin();
     }
   });
 

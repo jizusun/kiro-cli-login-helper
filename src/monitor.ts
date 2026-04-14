@@ -42,16 +42,22 @@ export async function handleLogin() {
   consola.success("Login success notification sent");
 }
 
-export async function checkAndLogin(
-  isLoggingIn: { value: boolean },
+export function createCheckAndLogin(
   checkLoginFn: () => Promise<boolean>,
   loginFn: () => Promise<void>
 ) {
-  consola.info("Checking login status");
-  if (!await checkLoginFn() && !isLoggingIn.value) {
-    consola.warn("Not logged in, triggering login");
-    isLoggingIn.value = true;
-    await loginFn();
-    isLoggingIn.value = false;
-  }
+  let locked = false;
+  return async () => {
+    if (locked) return;
+    locked = true;
+    try {
+      consola.info("Checking login status");
+      if (!await checkLoginFn()) {
+        consola.warn("Not logged in, triggering login");
+        await loginFn();
+      }
+    } finally {
+      locked = false;
+    }
+  };
 }
