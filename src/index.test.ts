@@ -2,18 +2,18 @@ import { test, expect } from "bun:test";
 import { formatInterval, resolveConfig } from "./index";
 
 test("formatInterval: seconds", () => {
-  expect(formatInterval(5000)).toBe("5s");
-  expect(formatInterval(30000)).toBe("30s");
+  expect(formatInterval(5000)).toBe("5 sec");
+  expect(formatInterval(30000)).toBe("30 sec");
 });
 
 test("formatInterval: minutes", () => {
-  expect(formatInterval(60000)).toBe("1.0m");
-  expect(formatInterval(600000)).toBe("10.0m");
+  expect(formatInterval(60000)).toBe("1 min");
+  expect(formatInterval(600000)).toBe("10 min");
 });
 
 test("formatInterval: hours", () => {
-  expect(formatInterval(3600000)).toBe("1.0h");
-  expect(formatInterval(7200000)).toBe("2.0h");
+  expect(formatInterval(3600000)).toBe("1 hr");
+  expect(formatInterval(7200000)).toBe("2 hr");
 });
 
 test("resolveConfig: uses CLI opts over env", () => {

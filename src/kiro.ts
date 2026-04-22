@@ -14,7 +14,7 @@ export class LoginSession {
   private deviceUrl: string | null = null;
   private notificationSent = false;
 
-  async start(config: LoginConfig, onDeviceUrl: (url: string) => void): Promise<void> {
+  async start(config: LoginConfig, expiresMs: number, onDeviceUrl: (url: string) => void): Promise<number> {
     let entersSent = 0;
 
     const proc = Bun.spawn(
@@ -27,7 +27,7 @@ export class LoginSession {
           cols: 120,
           rows: 30,
           data: (terminal, data) => {
-            process.stdout.write(data);
+            process.stdout.isTTY && process.stdout.write(data);
             const str = data.toString();
 
             if (entersSent === 0 && str.includes("Enter Start URL")) {
@@ -51,8 +51,12 @@ export class LoginSession {
       }
     );
 
+    const timeoutMs = Math.max(expiresMs - 60_000, 60_000); // kill 1 min before expiry, min 1 min
+    const timeout = setTimeout(() => proc.kill(), timeoutMs);
     await proc.exited;
+    clearTimeout(timeout);
     proc.terminal.close();
+    return proc.exitCode ?? 1;
   }
 }
 
